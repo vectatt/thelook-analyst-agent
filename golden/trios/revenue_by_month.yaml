@@ -1,0 +1,39 @@
+id: revenue_by_month
+question: What is our monthly revenue trend over the last 12 months?
+aliases:
+  - monthly revenue
+  - revenue per month last year
+  - how are sales trending month over month
+  - sales trend
+tags: [revenue, time-series, orders, customers, aov]
+tables: [order_items]
+analyst_notes: |
+  Revenue = SUM(order_items.sale_price), excluding Cancelled and Returned items. Never multiply by
+  orders.num_of_item. Window = the 12 complete calendar months before the current month, so the
+  latest partial month does not read as a drop. Report revenue, orders, customers and AOV together:
+  a revenue move is explained by whichever of the three components moved.
+sql: |
+  SELECT
+    DATE_TRUNC(DATE(oi.created_at), MONTH) AS month,
+    ROUND(SUM(oi.sale_price), 2) AS revenue,
+    COUNT(DISTINCT oi.order_id) AS orders,
+    COUNT(DISTINCT oi.user_id) AS customers,
+    ROUND(SUM(oi.sale_price) / COUNT(DISTINCT oi.order_id), 2) AS aov
+  FROM order_items oi
+  WHERE oi.status NOT IN ('Cancelled', 'Returned')
+    AND DATE(oi.created_at) >= DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 12 MONTH)
+    AND DATE(oi.created_at) < DATE_TRUNC(CURRENT_DATE(), MONTH)
+  GROUP BY month
+  ORDER BY month
+report: |
+  Revenue over the last 12 complete months grew steadily, with the latest month the highest of the
+  period. Orders and customers rose in step, and AOV was flat, so growth came from more buyers rather
+  than bigger baskets.
+
+  WHY: customer count is the driver; AOV did not move. Seasonality is visible in the summer months.
+
+  ACTION ITEMS
+  1. Protect the acquisition channels that delivered the customer growth (see channel performance).
+  2. Test basket-size levers (bundles, free-shipping threshold) — AOV is the untapped component.
+  3. Re-run this view monthly; flag any month where orders fall while customers rise (conversion issue).
+verified_at: 2026-08-26

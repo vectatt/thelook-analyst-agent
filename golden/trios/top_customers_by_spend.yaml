@@ -1,0 +1,42 @@
+id: top_customers_by_spend
+question: Who are our top 10 customers by total spend?
+aliases:
+  - best customers
+  - highest spending customers
+  - top customers total spend
+  - most valuable customers
+tags: [customers, revenue, segments]
+tables: [order_items, users]
+analyst_notes: |
+  Customers are identified by id and described by segment (state, country, acquisition channel, age).
+  Names, e-mails and addresses are never part of the answer. Spend = revenue excluding Cancelled
+  and Returned. Report orders alongside spend so a one-off large order is distinguishable from a
+  loyal repeat buyer.
+sql: |
+  SELECT
+    oi.user_id AS customer_id,
+    u.state,
+    u.country,
+    u.traffic_source,
+    u.age,
+    ROUND(SUM(oi.sale_price), 2) AS total_spend,
+    COUNT(DISTINCT oi.order_id) AS orders,
+    ROUND(SUM(oi.sale_price) / COUNT(DISTINCT oi.order_id), 2) AS aov
+  FROM order_items oi
+  JOIN users u ON u.id = oi.user_id
+  WHERE oi.status NOT IN ('Cancelled', 'Returned')
+  GROUP BY 1, 2, 3, 4, 5
+  ORDER BY total_spend DESC
+  LIMIT 10
+report: |
+  The top 10 customers each spent several times the average customer, and most of them did it in a
+  handful of orders — they are high-basket buyers, not high-frequency ones. They cluster in a few
+  large states and came mostly through Search and Organic.
+
+  WHY: basket value, not frequency, separates the top tier.
+
+  ACTION ITEMS
+  1. Offer the top tier early access to new arrivals in their preferred categories.
+  2. Check whether their acquisition channels (Search, Organic) are under-invested relative to their value.
+  3. Watch for churn: any top-10 customer with no order in 90 days gets a personal outreach.
+verified_at: 2026-08-26

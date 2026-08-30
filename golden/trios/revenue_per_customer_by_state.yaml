@@ -1,0 +1,44 @@
+id: revenue_per_customer_by_state
+question: How does spend per customer compare across US states, and which states under- or over-perform?
+aliases:
+  - compare states by customer spend
+  - which states are underspending
+  - why are customers in one state spending less than another
+  - state performance
+  - revenue per customer by state
+tags: [geography, state, customers, revenue, comparison, why]
+tables: [users, order_items]
+analyst_notes: |
+  Never compare states on raw revenue: customer counts differ several-fold. Compare revenue per
+  customer, and only states with a meaningful base (> 200 customers). To explain a gap, decompose
+  it: revenue per customer = items per customer x average item price. If avg item price differs the
+  gap is product mix or discounting; if items per customer differs it is basket size or frequency.
+  A "why are customers in state X underspending vs Y" question is answered by filtering this
+  result to the two states and reading the decomposition.
+sql: |
+  SELECT
+    u.state,
+    COUNT(DISTINCT u.id) AS customers,
+    ROUND(SUM(oi.sale_price), 0) AS revenue,
+    ROUND(SUM(oi.sale_price) / COUNT(DISTINCT u.id), 2) AS revenue_per_customer,
+    ROUND(COUNT(oi.id) / COUNT(DISTINCT u.id), 2) AS items_per_customer,
+    ROUND(AVG(oi.sale_price), 2) AS avg_item_price
+  FROM users u
+  JOIN order_items oi ON oi.user_id = u.id
+  WHERE oi.status NOT IN ('Cancelled', 'Returned')
+    AND u.country = 'United States'
+  GROUP BY u.state
+  HAVING customers > 200
+  ORDER BY revenue_per_customer DESC
+report: |
+  Spend per customer ranges roughly 25% between the best and worst states, and the gap is mostly
+  average item price: low-spend states buy cheaper items, not fewer. Customer counts explain raw
+  revenue rank but not per-customer performance.
+
+  WHY: product mix / price point, not engagement. Basket size is similar everywhere.
+
+  ACTION ITEMS
+  1. In the bottom-quartile states, test merchandising of mid- and premium-price items on the landing page.
+  2. Audit discount usage by state; over-discounting shows up exactly as low avg item price.
+  3. Replicate the top states' category mix in comparable states and measure after one quarter.
+verified_at: 2026-08-26

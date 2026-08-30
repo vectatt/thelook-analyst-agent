@@ -1,0 +1,43 @@
+id: age_gender_spend
+question: Which age groups and genders spend the most?
+aliases:
+  - spend by age group
+  - revenue by gender
+  - customer demographics
+  - who are our customers
+tags: [customers, demographics, age, gender, segments]
+tables: [users, order_items]
+analyst_notes: |
+  Bucket age into bands (under 18, 18-24, 25-34, 35-44, 45-54, 55-64, 65+). Show customers,
+  revenue and revenue per customer per band and gender. The dataset is synthetic and contains
+  minors; report them as a band, do not single them out. Revenue excludes Cancelled/Returned.
+sql: |
+  SELECT
+    CASE
+      WHEN u.age < 18 THEN 'under 18'
+      WHEN u.age < 25 THEN '18-24'
+      WHEN u.age < 35 THEN '25-34'
+      WHEN u.age < 45 THEN '35-44'
+      WHEN u.age < 55 THEN '45-54'
+      WHEN u.age < 65 THEN '55-64'
+      ELSE '65+'
+    END AS age_band,
+    u.gender,
+    COUNT(DISTINCT u.id) AS customers,
+    ROUND(SUM(oi.sale_price), 0) AS revenue,
+    ROUND(SUM(oi.sale_price) / COUNT(DISTINCT u.id), 2) AS revenue_per_customer
+  FROM users u
+  JOIN order_items oi ON oi.user_id = u.id
+  WHERE oi.status NOT IN ('Cancelled', 'Returned')
+  GROUP BY age_band, u.gender
+  ORDER BY revenue DESC
+report: |
+  Revenue is spread evenly across age bands and genders; no segment stands out on revenue per
+  customer. Segment size, not spend per head, determines each band's contribution.
+
+  WHY: the product range appeals broadly; there is no high-value niche to over-serve.
+
+  ACTION ITEMS
+  1. Do not over-target by age; spend on channels rather than demographics.
+  2. Track revenue per customer by band quarterly to detect a segment starting to pull ahead.
+verified_at: 2026-08-26

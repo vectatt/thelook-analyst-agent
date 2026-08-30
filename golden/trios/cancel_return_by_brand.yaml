@@ -1,0 +1,38 @@
+id: cancel_return_by_brand
+question: Which brands have the highest cancellation and return rates?
+aliases:
+  - most returned brands
+  - most cancelled brands
+  - cancellation rate by brand
+  - returns by brand
+tags: [returns, cancellations, brand, quality]
+tables: [order_items, products]
+analyst_notes: |
+  Cancellation rate = Cancelled items / all items. Return rate = Returned / items that were not
+  cancelled. Only brands with enough volume (>= 300 items) are ranked, otherwise small brands with
+  one return dominate. Rank by return rate; cancellations are usually a checkout/payment signal,
+  returns a product-fit signal — say which one is high.
+sql: |
+  SELECT
+    p.brand,
+    COUNT(oi.id) AS items,
+    ROUND(SAFE_DIVIDE(COUNTIF(oi.status = 'Cancelled'), COUNT(oi.id)) * 100, 1) AS cancel_rate_pct,
+    ROUND(SAFE_DIVIDE(COUNTIF(oi.status = 'Returned'), COUNTIF(oi.status != 'Cancelled')) * 100, 1) AS return_rate_pct,
+    ROUND(SUM(IF(oi.status = 'Returned', oi.sale_price, 0)), 0) AS returned_revenue
+  FROM order_items oi
+  JOIN products p ON p.id = oi.product_id
+  GROUP BY p.brand
+  HAVING items >= 300
+  ORDER BY return_rate_pct DESC
+  LIMIT 15
+report: |
+  Return rates for the highest brands run a few points above the catalogue average; cancellation
+  rates are similar across brands, which points to product fit rather than checkout problems.
+
+  WHY: fit and expectation gaps on specific brands, not a checkout issue.
+
+  ACTION ITEMS
+  1. For the top 3 returned brands, sample return reasons for one month and fix the leading cause.
+  2. Add brand-level size guidance where the brand runs small or large.
+  3. Include returned_revenue in the monthly brand review, not just gross revenue.
+verified_at: 2026-08-26

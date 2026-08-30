@@ -1,0 +1,42 @@
+id: top_products_by_revenue
+question: Which products generated the most revenue in the last 12 months?
+aliases:
+  - best selling products
+  - top products
+  - highest revenue products
+  - up-to-date revenue by product
+tags: [products, revenue, margin, ranking]
+tables: [order_items, products]
+analyst_notes: |
+  Rank by revenue (SUM sale_price, excluding Cancelled/Returned) but always show units and margin
+  next to it: a top-revenue product with thin margin is a different story from one with fat margin.
+  Margin = sale_price - products.cost. Use the last 12 complete months.
+sql: |
+  SELECT
+    p.id AS product_id,
+    p.name,
+    p.brand,
+    p.category,
+    COUNT(oi.id) AS units,
+    ROUND(SUM(oi.sale_price), 2) AS revenue,
+    ROUND(SUM(oi.sale_price - p.cost), 2) AS gross_margin,
+    ROUND(SAFE_DIVIDE(SUM(oi.sale_price - p.cost), SUM(oi.sale_price)) * 100, 1) AS margin_pct
+  FROM order_items oi
+  JOIN products p ON p.id = oi.product_id
+  WHERE oi.status NOT IN ('Cancelled', 'Returned')
+    AND DATE(oi.created_at) >= DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 12 MONTH)
+    AND DATE(oi.created_at) < DATE_TRUNC(CURRENT_DATE(), MONTH)
+  GROUP BY 1, 2, 3, 4
+  ORDER BY revenue DESC
+  LIMIT 15
+report: |
+  The top products by revenue are high-ticket outerwear and denim; each sells few units at a high
+  price. Margin percentages are similar across the list, so revenue rank and margin rank agree.
+
+  WHY: price point drives the ranking; none of the leaders relies on volume.
+
+  ACTION ITEMS
+  1. Keep the top 5 in stock through the peak months — stock-outs cost more here than anywhere.
+  2. Build "complete the look" bundles around the leaders to lift units of mid-price items.
+  3. Review any leader whose margin % is below the list median for cost or discount problems.
+verified_at: 2026-08-26

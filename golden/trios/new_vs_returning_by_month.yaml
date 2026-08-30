@@ -1,0 +1,48 @@
+id: new_vs_returning_by_month
+question: How many new versus returning customers do we have each month?
+aliases:
+  - new vs returning customers
+  - repeat customers per month
+  - customer retention by month
+  - churn
+tags: [customers, retention, new, returning, time-series]
+tables: [order_items]
+analyst_notes: |
+  A customer is "new" in the month of their first non-cancelled order and "returning" in any later
+  month they order. Compute first-order month per customer in a CTE, then classify each customer-
+  month. Last 12 complete months. A falling returning share is the early churn signal — that is the
+  number to watch, not the raw new count.
+sql: |
+  WITH first_order AS (
+    SELECT user_id, DATE_TRUNC(MIN(DATE(created_at)), MONTH) AS first_month
+    FROM order_items
+    WHERE status != 'Cancelled'
+    GROUP BY user_id
+  ),
+  monthly AS (
+    SELECT DISTINCT user_id, DATE_TRUNC(DATE(created_at), MONTH) AS month
+    FROM order_items
+    WHERE status != 'Cancelled'
+      AND DATE(created_at) >= DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 12 MONTH)
+      AND DATE(created_at) < DATE_TRUNC(CURRENT_DATE(), MONTH)
+  )
+  SELECT
+    m.month,
+    COUNTIF(m.month = f.first_month) AS new_customers,
+    COUNTIF(m.month > f.first_month) AS returning_customers,
+    ROUND(SAFE_DIVIDE(COUNTIF(m.month > f.first_month), COUNT(*)) * 100, 1) AS returning_share_pct
+  FROM monthly m
+  JOIN first_order f USING (user_id)
+  GROUP BY m.month
+  ORDER BY m.month
+report: |
+  New customers make up the large majority of buyers every month and the returning share is low and
+  flat. Growth is acquisition-led; retention is not yet contributing.
+
+  WHY: a young customer base with few repeat purchases per year.
+
+  ACTION ITEMS
+  1. Launch a 30/60/90-day post-purchase e-mail series and measure the returning share monthly.
+  2. Set a returning-share target for next quarter; report it beside revenue.
+  3. Look at which categories first-time buyers purchase, and what returning buyers add on.
+verified_at: 2026-08-26

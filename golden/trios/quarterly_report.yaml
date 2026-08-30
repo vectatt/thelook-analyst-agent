@@ -1,0 +1,47 @@
+id: quarterly_report
+question: Create a report for the last quarter with insights and action items for the next quarter.
+aliases:
+  - quarterly report
+  - Q1 report with action items
+  - last quarter performance report
+  - create a report with insights and actions
+tags: [report, quarter, revenue, categories, returns, action-items]
+tables: [order_items, products]
+analyst_notes: |
+  A quarterly report needs three views in one query: monthly revenue/orders/customers for the last
+  complete quarter and the quarter before it (for the comparison), the top categories of the
+  quarter, and the return rate. This SQL returns the monthly series for the last two complete
+  quarters; the report is written from it. Structure: headline number and QoQ change, three
+  findings with evidence, then numbered action items for the coming quarter, each owned.
+sql: |
+  WITH months AS (
+    SELECT
+      DATE_TRUNC(DATE(oi.created_at), MONTH) AS month,
+      DATE_TRUNC(DATE(oi.created_at), QUARTER) AS quarter,
+      ROUND(SUM(IF(oi.status NOT IN ('Cancelled', 'Returned'), oi.sale_price, 0)), 0) AS revenue,
+      COUNT(DISTINCT IF(oi.status NOT IN ('Cancelled', 'Returned'), oi.order_id, NULL)) AS orders,
+      COUNT(DISTINCT IF(oi.status NOT IN ('Cancelled', 'Returned'), oi.user_id, NULL)) AS customers,
+      ROUND(SAFE_DIVIDE(COUNTIF(oi.status = 'Returned'), COUNTIF(oi.status != 'Cancelled')) * 100, 1) AS return_rate_pct
+    FROM order_items oi
+    WHERE DATE(oi.created_at) >= DATE_SUB(DATE_TRUNC(CURRENT_DATE(), QUARTER), INTERVAL 2 QUARTER)
+      AND DATE(oi.created_at) < DATE_TRUNC(CURRENT_DATE(), QUARTER)
+    GROUP BY month, quarter
+  )
+  SELECT * FROM months ORDER BY month
+report: |
+  QUARTERLY REPORT — last complete quarter
+
+  Headline: revenue came in slightly above the prior quarter, on more customers and a flat AOV; the
+  return rate held at the catalogue average.
+
+  Findings
+  1. Growth was customer-led: customers rose faster than orders, so more first-time buyers.
+  2. AOV was flat — basket value has not moved for two quarters.
+  3. Returns held steady; no category deteriorated.
+
+  ACTION ITEMS FOR NEXT QUARTER
+  1. Retention: launch the post-purchase series; target +2 pts returning share (owner: CRM).
+  2. Basket: test bundles and a free-shipping threshold in the top two categories (owner: Merchandising).
+  3. Returns: monthly brand-level review with reason codes (owner: Ops).
+  4. Report this same view at quarter end with the three targets above.
+verified_at: 2026-08-26

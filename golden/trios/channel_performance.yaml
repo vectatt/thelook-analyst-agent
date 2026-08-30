@@ -1,0 +1,37 @@
+id: channel_performance
+question: Which acquisition channels bring the most valuable customers?
+aliases:
+  - marketing channel performance
+  - traffic source revenue
+  - which channel is doing well
+  - customers by traffic source
+tags: [channels, traffic_source, customers, revenue, aov, marketing]
+tables: [users, order_items]
+analyst_notes: |
+  users.traffic_source is the acquisition channel. Judge channels on revenue per customer and AOV,
+  not on customer count alone: a channel that brings many low-value customers is not "doing well".
+  Revenue excludes Cancelled/Returned.
+sql: |
+  SELECT
+    u.traffic_source AS channel,
+    COUNT(DISTINCT u.id) AS customers,
+    ROUND(SUM(oi.sale_price), 0) AS revenue,
+    ROUND(SUM(oi.sale_price) / COUNT(DISTINCT u.id), 2) AS revenue_per_customer,
+    ROUND(SUM(oi.sale_price) / COUNT(DISTINCT oi.order_id), 2) AS aov,
+    ROUND(COUNT(DISTINCT oi.order_id) / COUNT(DISTINCT u.id), 2) AS orders_per_customer
+  FROM users u
+  JOIN order_items oi ON oi.user_id = u.id
+  WHERE oi.status NOT IN ('Cancelled', 'Returned')
+  GROUP BY channel
+  ORDER BY revenue DESC
+report: |
+  Search brings by far the most customers and revenue; per-customer value is close across channels,
+  so the channel ranking is a volume ranking. No channel is bringing systematically better customers.
+
+  WHY: acquisition volume differs; customer quality does not.
+
+  ACTION ITEMS
+  1. Treat channel budget as a volume decision; scale the cheapest cost-per-customer channel.
+  2. Run one retention test on Email-acquired customers, the channel with the most direct re-contact.
+  3. Add cost data to this view to turn revenue per customer into return on spend.
+verified_at: 2026-08-26

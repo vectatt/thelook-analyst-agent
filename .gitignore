@@ -1,0 +1,26 @@
+# secrets — but .env.example is the setup template the README tells you to copy
+.env
+.env.*
+!.env.example
+
+# local environment
+.venv/
+__pycache__/
+*.pyc
+
+# local state produced by the agent
+*.db
+tmp/
+traces/
+lancedb/
+
+# the assignment brief itself is not part of the deliverable
+task.txt
+
+# OS
+.DS_Store
+
+# runtime state (SQLite, vector index, traces, smoke logs)
+data/
+logs/
+.pytest_cache/

@@ -1,0 +1,41 @@
+id: category_performance
+question: How do product categories compare on revenue, margin and return rate?
+aliases:
+  - category performance
+  - which categories make the most money
+  - margin by category
+  - return rate by category
+  - compare categories
+tags: [products, category, revenue, margin, returns, comparison]
+tables: [order_items, products]
+analyst_notes: |
+  Three numbers per category, always together: revenue (net of Cancelled/Returned), margin %
+  (sale_price - cost over sale_price) and return rate (Returned items over all non-cancelled items).
+  A category can lead on revenue and still be a problem if its return rate is high — returns are
+  cost and customer friction. Cancelled items are excluded from the return-rate denominator because
+  they never shipped.
+sql: |
+  SELECT
+    p.category,
+    COUNTIF(oi.status NOT IN ('Cancelled', 'Returned')) AS units_sold,
+    ROUND(SUM(IF(oi.status NOT IN ('Cancelled', 'Returned'), oi.sale_price, 0)), 0) AS revenue,
+    ROUND(SAFE_DIVIDE(
+      SUM(IF(oi.status NOT IN ('Cancelled', 'Returned'), oi.sale_price - p.cost, 0)),
+      SUM(IF(oi.status NOT IN ('Cancelled', 'Returned'), oi.sale_price, 0))) * 100, 1) AS margin_pct,
+    ROUND(SAFE_DIVIDE(COUNTIF(oi.status = 'Returned'), COUNTIF(oi.status != 'Cancelled')) * 100, 1) AS return_rate_pct
+  FROM order_items oi
+  JOIN products p ON p.id = oi.product_id
+  GROUP BY p.category
+  ORDER BY revenue DESC
+report: |
+  Outerwear, Jeans and Sweaters lead revenue; margin % is fairly flat across categories, so the
+  revenue leaders are also the profit leaders. Return rates sit in a narrow band with a couple of
+  categories above it.
+
+  WHY: category mix, not margin structure, decides profit; returns are the only differentiator.
+
+  ACTION ITEMS
+  1. For the categories with the highest return rate, review size guides and product photos first.
+  2. Push marketing spend toward top-revenue categories in their seasonal peak.
+  3. Treat any category whose return rate rises two months in a row as an operational alert.
+verified_at: 2026-08-26

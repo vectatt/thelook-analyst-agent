@@ -1,0 +1,31 @@
+# Python 3.12. Install:  python -m venv .venv && .venv/bin/pip install -r requirements.txt
+# Versions are pinned to what the prototype was built and verified against.
+
+# agent runtime (pinned: the 3.0 line changed the sessions schema)
+agno==3.0.1
+sqlalchemy==2.0.52            # required by agno.db.sqlite.SqliteDb
+opentelemetry-sdk==1.44.0     # required by agno.tracing
+opentelemetry-exporter-otlp==1.44.0
+
+# models
+httpx==0.28.1                 # direct OpenRouter calls from the tools (analyst/llm.py)
+google-genai==2.20.0          # Gemini fallback + embeddings for the golden bucket
+openai==3.3.1                 # required by agno.models.openrouter
+
+# data
+google-cloud-bigquery==3.44.0
+google-cloud-bigquery-storage==2.41.0
+db-dtypes==1.7.1
+pandas==3.0.5
+pyarrow==25.0.1
+sqlglot==30.17.0              # SELECT-only AST check, deny-list, LIMIT injection
+lancedb==0.25.3               # local vector store for the golden bucket
+
+# app
+python-dotenv==1.2.3
+rich==15.0.0
+pyyaml>=6.0                   # golden trios are YAML
+tabulate>=0.9                 # pandas DataFrame.to_markdown for bounded result previews
+
+# tests / evals
+pytest==8.4.2
